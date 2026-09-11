@@ -1,0 +1,9 @@
+{
+  "name": "cardly",
+  "private": true,
+  "scripts": {
+    "mobile": "pnpm --filter cardly-mobile start",
+    "web": "pnpm --filter cardly-web dev",
+    "web:migrate": "pnpm --filter cardly-web prisma:migrate"
+  }
+}

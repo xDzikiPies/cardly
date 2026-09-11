@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// User — konto. Bycie "specjalistą" to osobny, świadomy krok (SpecialistProfile),
+// NIE dzieje się automatycznie przy rejestracji.
+// ---------------------------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cards             BusinessCard[]
+  specialistProfile SpecialistProfile?
+  reviewsWritten    Review[]           @relation("ReviewAuthor")
+  exchangesSent     Exchange[]         @relation("ExchangeFrom")
+  exchangesReceived Exchange[]         @relation("ExchangeTo")
+}
+
+// ---------------------------------------------------------------------------
+// Wizytówka — użytkownik może mieć kilka, jedna jest "primary" (domyślna do wymiany)
+// ---------------------------------------------------------------------------
+model BusinessCard {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName   String
+  lastName    String
+  jobTitle    String
+  company     String?
+  email       String
+  phone       String
+  workAddress String?
+  logoUrl     String?
+
+  backgroundId String
+  background   CardBackground @relation(fields: [backgroundId], references: [id])
+
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exchanges Exchange[]
+
+  @@index([userId])
+}
+
+// Predefiniowane, gotowe wizualnie tła do wyboru w edytorze
+model CardBackground {
+  id         String   @id @default(cuid())
+  name       String
+  colorStart String // hex, np. "#6C5CE7"
+  colorEnd   String // hex
+  textColor  String // hex, kolor tekstu na tym tle
+  pattern    String   @default("none") // "none" | "dots" | "waves" | "grid"
+  isPremium  Boolean  @default(false)
+
+  cards BusinessCard[]
+}
+
+// ---------------------------------------------------------------------------
+// Profil specjalisty — świadomy opt-in, żeby być widocznym na liście
+// ---------------------------------------------------------------------------
+model SpecialistProfile {
+  id         String @id @default(cuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  profession String
+  bio        String
+  categories String[] // np. ["Prawo", "Nieruchomości"]
+
+  city      String
+  latitude  Float
+  longitude Float
+
+  ratingAvg   Float @default(0)
+  ratingCount Int   @default(0)
+
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reviews Review[]
+
+  @@index([city])
+}
+
+model Review {
+  id                  String            @id @default(cuid())
+  specialistProfileId String
+  specialistProfile   SpecialistProfile @relation(fields: [specialistProfileId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation("ReviewAuthor", fields: [authorId], references: [id])
+
+  rating  Int // 1-5
+  comment String?
+
+  createdAt DateTime @default(now())
+
+  @@index([specialistProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Wymiana wizytówek — NFC lub QR
+// ---------------------------------------------------------------------------
+model Exchange {
+  id     String @id @default(cuid())
+  method String // "NFC" | "QR"
+
+  fromUserId String
+  fromUser   User   @relation("ExchangeFrom", fields: [fromUserId], references: [id])
+
+  toUserId String
+  toUser   User   @relation("ExchangeTo", fields: [toUserId], references: [id])
+
+  cardId String
+  card   BusinessCard @relation(fields: [cardId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([fromUserId])
+  @@index([toUserId])
+}

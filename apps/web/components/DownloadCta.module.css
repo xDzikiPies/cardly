@@ -1,0 +1,64 @@
+.section {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 24px 100px;
+}
+
+.card {
+  background: linear-gradient(160deg, #17171f, #08080a);
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  padding: 90px 40px;
+  text-align: center;
+  color: var(--text);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 108, 255, 0.35), transparent 70%);
+  top: -220px;
+  right: -160px;
+}
+
+.title {
+  position: relative;
+  font-size: 44px;
+  line-height: 1.15;
+  max-width: 16ch;
+  margin: 0 auto;
+}
+
+.title em {
+  font-style: normal;
+  color: var(--amber);
+}
+
+.body {
+  position: relative;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-soft);
+  max-width: 40ch;
+  margin: 20px auto 36px;
+}
+
+.buttons {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 56px 24px;
+  }
+  .title {
+    font-size: 30px;
+  }
+}
