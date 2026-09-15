@@ -8,7 +8,13 @@ export async function createNotification(
   data?: Record<string, unknown>
 ) {
   return prisma.notification.create({
-    data: { userId, type, title, body, data: data ?? undefined },
+    data: {
+      userId,
+      type,
+      title,
+      body,
+      data: (data ?? undefined) as any // <--- Dodaj "as any" lub "as Prisma.InputJsonValue"
+    },
   });
 }
 
