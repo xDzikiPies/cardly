@@ -9,15 +9,19 @@ import { Card } from "@/components/ui/Card";
 import { colors, radius, spacing, typography } from "@/theme";
 
 interface QrPanelProps {
-  myCard: BusinessCard;
+  myCard: BusinessCard | null;
   onScanned: (raw: string) => void;
+  /** Tylko pokazuje QR, bez przełącznika na skan (używane w osobnym flow "Udostępnij"). */
+  shareOnly?: boolean;
+  /** Tylko skanuje, bez przełącznika na pokaż (używane w osobnym flow "Odbierz"). */
+  scanOnly?: boolean;
 }
 
-export function QrPanel({ myCard, onScanned }: QrPanelProps) {
-  const [mode, setMode] = useState<"show" | "scan">("show");
+export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps) {
+  const [mode, setMode] = useState<"show" | "scan">(scanOnly ? "scan" : "show");
   const [permission, requestPermission] = useCameraPermissions();
 
-  if (mode === "show") {
+  if (mode === "show" && myCard) {
     // Kodujemy URL, nie surowe dane — dzięki temu ten sam kod QR działa jako fallback:
     // otwarty w przeglądarce (bez apki) pokazuje wizytówkę na stronie cardly.app/c/...
     const shareUrl = buildCardShareUrl(myCard);
@@ -30,7 +34,7 @@ export function QrPanel({ myCard, onScanned }: QrPanelProps) {
         <Text style={styles.hint}>
           Pokaż ten kod drugiej osobie — zadziała w apce Cardly, a bez niej otworzy Twoją wizytówkę w przeglądarce
         </Text>
-        <Button label="Zamiast tego zeskanuj kod" variant="ghost" onPress={() => setMode("scan")} />
+        {!shareOnly && <Button label="Zamiast tego zeskanuj kod" variant="ghost" onPress={() => setMode("scan")} />}
       </View>
     );
   }
@@ -54,7 +58,9 @@ export function QrPanel({ myCard, onScanned }: QrPanelProps) {
         />
       </View>
       <Text style={styles.hint}>Wyceluj aparat w kod QR drugiej osoby</Text>
-      <Button label="Zamiast tego pokaż mój kod" variant="ghost" onPress={() => setMode("show")} />
+      {!scanOnly && myCard && (
+        <Button label="Zamiast tego pokaż mój kod" variant="ghost" onPress={() => setMode("show")} />
+      )}
     </View>
   );
 }

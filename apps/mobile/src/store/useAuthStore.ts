@@ -29,16 +29,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, isAuthenticated: !!user, isCheckingSession: false });
   },
 
-  login: async (email, password) => {
-    set({ isSubmitting: true, error: null });
-    try {
-      const user = await apiLogin(email, password);
-      set({ user, isAuthenticated: true, isSubmitting: false });
-    } catch {
-      set({ error: "Nieprawidłowy email lub hasło", isSubmitting: false });
-      throw new Error("INVALID_CREDENTIALS");
-    }
-  },
+login: async (email, password) => {
+  set({ isSubmitting: true, error: null });
+  try {
+    const user = await apiLogin(email, password);
+    console.log("SUKCES LOGIN:", user);
+    set({ user, isAuthenticated: true, isSubmitting: false });
+  } catch (err) {
+    console.error("BŁĄD LOGINU (szczegóły):", err); // <--- ZOBACZ TO W KONSOLI
+    set({ error: "Nieprawidłowy email lub hasło", isSubmitting: false });
+    throw new Error("INVALID_CREDENTIALS");
+  }
+},
 
   register: async (input) => {
     set({ isSubmitting: true, error: null });

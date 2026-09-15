@@ -95,7 +95,10 @@ const becomeSpecialistSchema = z.object({
   longitude: z.number().optional().default(0),
 });
 
-/** POST /api/specialists — "Dołącz jako specjalista", osobny krok od rejestracji konta. */
+/** POST /api/specialists — "Dołącz jako specjalista" (publikuje profil na liście).
+ *  Upsert: jeśli user wcześniej ustawił profession/bio przez PATCH /api/profile
+ *  (co tworzy NIE-opublikowany SpecialistProfile), ten request go uzupełnia
+ *  o miasto/lokalizację i publikuje — zamiast rzucać błąd "już istnieje". */
 export async function POST(req: NextRequest) {
   const userId = await getUserIdFromRequest(req);
   if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -106,14 +109,17 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await prisma.specialistProfile.findUnique({ where: { userId } });
-  if (existing) {
-    return NextResponse.json({ error: "ALREADY_SPECIALIST" }, { status: 409 });
-  }
 
-  const profile = await prisma.specialistProfile.create({
-    data: { ...parsed.data, userId },
-    include: { user: true },
-  });
+  const profile = existing
+    ? await prisma.specialistProfile.update({
+        where: { userId },
+        data: { ...parsed.data, isPublished: true },
+        include: { user: true },
+      })
+    : await prisma.specialistProfile.create({
+        data: { ...parsed.data, userId, isPublished: true },
+        include: { user: true },
+      });
 
   return NextResponse.json({
     id: profile.id,
@@ -126,7 +132,7 @@ export async function POST(req: NextRequest) {
     categories: profile.categories,
     city: profile.city,
     distanceKm: 0,
-    ratingAvg: 0,
-    ratingCount: 0,
+    ratingAvg: profile.ratingAvg,
+    ratingCount: profile.ratingCount,
   });
 }

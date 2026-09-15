@@ -7,7 +7,9 @@ import {
   Briefcase,
   ChevronRight,
   LogOut,
+  MessageCircle,
   Pencil,
+  Plus,
   Shield,
   UserPlus,
   X,
@@ -20,10 +22,12 @@ import { Chip } from "@/components/ui/Chip";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { getCurrentUser, getMyProfileDetails, updateMyProfileDetails } from "@/services/api";
+import { ServicesList } from "@/components/specialists/ServicesList";
+import { AddServiceModal } from "@/components/specialists/AddServiceModal";
+import { deleteService, getCurrentUser, getMyProfileDetails, getMyServices, updateMyProfileDetails } from "@/services/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ALL_CATEGORIES } from "@/mocks/data";
-import { SpecialistProfile, User } from "@/types";
+import { ServiceOffering, SpecialistProfile, User } from "@/types";
 import { colors, radius, spacing, typography } from "@/theme";
 
 export default function ProfileScreen() {
@@ -31,6 +35,8 @@ export default function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<SpecialistProfile | null>(null);
+  const [services, setServices] = useState<ServiceOffering[]>([]);
+  const [addServiceVisible, setAddServiceVisible] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [draftProfession, setDraftProfession] = useState("");
@@ -53,6 +59,7 @@ export default function ProfileScreen() {
       setDraftBio(p.bio);
       setDraftCategories(p.categories);
     });
+    getMyServices().then(setServices);
   }, []);
 
   const startEditing = () => {
@@ -193,6 +200,33 @@ export default function ProfileScreen() {
             </View>
           )}
 
+          {profile && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Moje usługi i cennik</Text>
+                <Pressable style={styles.editLink} onPress={() => setAddServiceVisible(true)} hitSlop={8}>
+                  <Plus size={14} color={colors.primary} />
+                  <Text style={styles.editLinkText}>Dodaj</Text>
+                </Pressable>
+              </View>
+              {services.length > 0 ? (
+                <ServicesList
+                  services={services}
+                  onDelete={async (serviceId) => {
+                    await deleteService(serviceId);
+                    setServices((prev) => prev.filter((s) => s.id !== serviceId));
+                  }}
+                />
+              ) : (
+                <Card>
+                  <Text style={styles.bioText}>
+                    Nie masz jeszcze żadnych usług. Dodaj je, żeby klienci widzieli Twój cennik na profilu.
+                  </Text>
+                </Card>
+              )}
+            </View>
+          )}
+
           {profile && profile.reviews.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Opinie o mnie ({profile.reviews.length})</Text>
@@ -219,7 +253,9 @@ export default function ProfileScreen() {
                 onPress={() => router.push("/become-specialist")}
               />
               <RowDivider />
-              <MenuRow icon={<Bell size={18} color={colors.textSecondary} />} label="Powiadomienia" onPress={() => {}} />
+              <MenuRow icon={<Bell size={18} color={colors.textSecondary} />} label="Powiadomienia" onPress={() => router.push("/notifications")} />
+              <RowDivider />
+              <MenuRow icon={<MessageCircle size={18} color={colors.textSecondary} />} label="Wiadomości" onPress={() => router.push("/conversations")} />
               <RowDivider />
               <MenuRow icon={<Shield size={18} color={colors.textSecondary} />} label="Prywatność i dane" onPress={() => {}} />
               <RowDivider />
@@ -234,6 +270,12 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
       </FadeInScreen>
+
+      <AddServiceModal
+        visible={addServiceVisible}
+        onClose={() => setAddServiceVisible(false)}
+        onAdded={(service) => setServices((prev) => [...prev, service])}
+      />
     </SafeAreaView>
   );
 }

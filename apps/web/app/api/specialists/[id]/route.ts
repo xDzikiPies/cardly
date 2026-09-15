@@ -13,6 +13,14 @@ interface ReviewWithAuthor {
   author: { firstName: string; lastName: string; avatarUrl: string | null };
 }
 
+interface ServiceRow {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  priceUnit: string | null;
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
 
@@ -21,6 +29,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     include: {
       user: true,
       reviews: { include: { author: true }, orderBy: { createdAt: "desc" } },
+      services: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -46,6 +55,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
       rating: r.rating,
       comment: r.comment ?? undefined,
       createdAt: r.createdAt.toISOString(),
+    })),
+    services: (profile.services as ServiceRow[]).map((s) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description ?? undefined,
+      price: s.price ?? undefined,
+      priceUnit: s.priceUnit ?? undefined,
     })),
   });
 }

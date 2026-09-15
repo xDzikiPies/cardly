@@ -26,6 +26,13 @@ model User {
   reviewsWritten    Review[]           @relation("ReviewAuthor")
   exchangesSent     Exchange[]         @relation("ExchangeFrom")
   exchangesReceived Exchange[]         @relation("ExchangeTo")
+
+  quoteRequestsSent QuoteRequest[]     @relation("QuoteRequester")
+  jobListings       JobListing[]       @relation("JobAuthor")
+  jobApplications    JobApplication[]  @relation("JobApplicant")
+  notifications      Notification[]
+  conversations       ConversationParticipant[]
+  messagesSent        Message[]
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +102,27 @@ model SpecialistProfile {
 
   reviews Review[]
 
+  services ServiceOffering[]
+  quoteRequests QuoteRequest[]
+
   @@index([city])
+}
+
+// Konkretna usługa, którą specjalista oferuje, z opcjonalną ceną
+// (brak ceny = "Do ustalenia" w UI)
+model ServiceOffering {
+  id                  String @id @default(cuid())
+  specialistProfileId String
+  specialistProfile   SpecialistProfile @relation(fields: [specialistProfileId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  price       Float? // null = "Do ustalenia"
+  priceUnit   String? // np. "godzina", "projekt", "m2" — opcjonalne doprecyzowanie
+
+  createdAt DateTime @default(now())
+
+  @@index([specialistProfileId])
 }
 
 model Review {
@@ -134,4 +161,150 @@ model Exchange {
 
   @@index([fromUserId])
   @@index([toUserId])
+}
+
+// ---------------------------------------------------------------------------
+// "Zapytaj o wycenę" — zapytanie kierowane do konkretnego specjalisty
+// ---------------------------------------------------------------------------
+model QuoteRequest {
+  id                  String @id @default(cuid())
+  specialistProfileId String
+  specialistProfile   SpecialistProfile @relation(fields: [specialistProfileId], references: [id], onDelete: Cascade)
+
+  requesterId String
+  requester   User   @relation("QuoteRequester", fields: [requesterId], references: [id])
+
+  title       String
+  description String
+  budget      Float? // null = brak podanego budżetu
+
+  status String @default("pending") // pending | accepted | declined
+
+  attachments QuoteRequestAttachment[]
+
+  conversationId String?       @unique
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([specialistProfileId])
+  @@index([requesterId])
+}
+
+model QuoteRequestAttachment {
+  id             String       @id @default(cuid())
+  quoteRequestId String
+  quoteRequest   QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  url            String
+}
+
+// ---------------------------------------------------------------------------
+// Rynek zleceń — użytkownicy wystawiają zlecenia, inni się zgłaszają
+// ---------------------------------------------------------------------------
+model JobListing {
+  id       String @id @default(cuid())
+  authorId String
+  author   User   @relation("JobAuthor", fields: [authorId], references: [id])
+
+  title       String
+  description String
+  category    String
+
+  budget     Float?
+  budgetType String @default("negotiable") // fixed | hourly | negotiable
+
+  city      String
+  latitude  Float
+  longitude Float
+
+  deadline DateTime?
+  status   String    @default("open") // open | in_progress | closed
+
+  createdAt DateTime @default(now())
+
+  applications JobApplication[]
+
+  @@index([category])
+  @@index([city])
+  @@index([status])
+}
+
+model JobApplication {
+  id           String     @id @default(cuid())
+  jobListingId String
+  jobListing   JobListing @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
+
+  applicantId String
+  applicant   User   @relation("JobApplicant", fields: [applicantId], references: [id])
+
+  message String?
+  price   Float?
+  status  String  @default("pending") // pending | accepted | rejected
+
+  conversationId String?       @unique
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([jobListingId])
+  @@index([applicantId])
+}
+
+// ---------------------------------------------------------------------------
+// Powiadomienia
+// ---------------------------------------------------------------------------
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type   String // "quote_request" | "quote_status" | "job_application" | "message" | "review"
+  title  String
+  body   String
+  isRead Boolean @default(false)
+  data   Json? // dowolny dodatkowy payload, np. { "conversationId": "..." }
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ---------------------------------------------------------------------------
+// Czat — jedna konwersacja na zapytanie o wycenę albo na zgłoszenie do zlecenia
+// ---------------------------------------------------------------------------
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  participants   ConversationParticipant[]
+  messages       Message[]
+  quoteRequest   QuoteRequest?
+  jobApplication JobApplication?
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  lastReadAt DateTime?
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
 }

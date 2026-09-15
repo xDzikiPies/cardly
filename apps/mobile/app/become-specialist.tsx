@@ -42,6 +42,7 @@ export default function BecomeSpecialistScreen() {
             <X size={22} color={colors.textSecondary} />
           </Pressable>
         }
+        showNotificationBell={false}
       />
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

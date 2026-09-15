@@ -58,6 +58,14 @@ export default function RootLayout() {
               options={{ presentation: "modal", animation: "slide_from_bottom" }}
             />
             <Stack.Screen name="specialist/[id]" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="conversations" />
+            <Stack.Screen name="conversation/[id]" />
+            <Stack.Screen name="job/[id]" />
+            <Stack.Screen
+              name="job-editor"
+              options={{ presentation: "modal", animation: "slide_from_bottom" }}
+            />
           </Stack.Protected>
         </Stack>
       </SafeAreaProvider>

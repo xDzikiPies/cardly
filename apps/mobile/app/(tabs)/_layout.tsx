@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { History, IdCard, Radar, Repeat, User } from "lucide-react-native";
+import { Briefcase, History, IdCard, Radar, Repeat, User } from "lucide-react-native";
 import { colors, typography } from "@/theme";
 
 export default function TabsLayout() {
@@ -31,6 +31,13 @@ export default function TabsLayout() {
         options={{
           title: "Specjaliści",
           tabBarIcon: ({ color, size }) => <Radar color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="jobs"
+        options={{
+          title: "Zlecenia",
+          tabBarIcon: ({ color, size }) => <Briefcase color={color} size={size} />,
         }}
       />
       <Tabs.Screen

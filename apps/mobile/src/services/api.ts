@@ -1,17 +1,26 @@
 import {
+  AppNotification,
   BusinessCard,
   CardBackground,
+  ChatMessage,
+  ConversationSummary,
   ExchangeMethod,
   ExchangeResult,
+  JobApplication,
+  JobFilters,
+  JobListing,
+  QuoteRequest,
   Review,
+  ServiceOffering,
   SpecialistFilters,
   SpecialistProfile,
   User,
 } from "@/types";
 import { getToken, setToken, clearToken } from "@/lib/tokenStore";
-import { INCOMING_MOCK_CARD, MOCK_EXCHANGES, MY_SPECIALIST_PROFILE } from "@/mocks/data";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
+/** Bazowy adres bez `/api` — do budowania pełnych URL-i do uploadowanych plików. */
+export const SERVER_URL = API_URL.replace(/\/api\/?$/, "");
 
 /** Konto testowe utworzone przez `npx prisma db seed` w apps/web. */
 export const DEMO_CREDENTIALS = { email: "kamil.nowicki@cardly.app", password: "cardly123" };
@@ -94,13 +103,9 @@ export async function getCurrentUser(): Promise<User> {
 
 // ---------------------------------------------------------------------------
 // Mój rozszerzony profil (bio, zawód, kategorie, opinie o mnie)
-// TODO: brak jeszcze dedykowanego endpointu GET/PATCH /api/profile — dopóki go nie ma,
-// ta sekcja zostaje na mocku w pamięci, żeby ekran Profil dalej działał.
 // ---------------------------------------------------------------------------
-let myProfileState: SpecialistProfile = { ...MY_SPECIALIST_PROFILE };
-
 export async function getMyProfileDetails(): Promise<SpecialistProfile> {
-  return { ...myProfileState };
+  return request<SpecialistProfile>("/profile");
 }
 
 export interface MyProfileDetailsInput {
@@ -110,8 +115,7 @@ export interface MyProfileDetailsInput {
 }
 
 export async function updateMyProfileDetails(patch: MyProfileDetailsInput): Promise<SpecialistProfile> {
-  myProfileState = { ...myProfileState, ...patch };
-  return { ...myProfileState };
+  return request<SpecialistProfile>("/profile", { method: "PATCH", body: JSON.stringify(patch) });
 }
 
 // ---------------------------------------------------------------------------
@@ -185,23 +189,183 @@ export async function becomeSpecialist(input: BecomeSpecialistInput): Promise<Sp
 
 // ---------------------------------------------------------------------------
 // Wymiana (NFC / QR)
-// TODO: prawdziwy handshake NFC/QR między dwoma telefonami wymaga osobnego protokołu
-// (kto komu wysyła co i kiedy) — dopóki go nie ma, historia wymian zostaje na mocku,
-// żeby dało się przetestować cały UX bez dwóch fizycznych urządzeń.
 // ---------------------------------------------------------------------------
-let myExchangesState: ExchangeResult[] = [...MOCK_EXCHANGES];
+export interface SubmitExchangeResult extends ExchangeResult {}
 
-export async function submitExchange(method: ExchangeMethod): Promise<ExchangeResult> {
-  const exchange: ExchangeResult = {
-    id: `ex_${Date.now()}`,
-    method,
-    card: INCOMING_MOCK_CARD,
-    createdAt: new Date().toISOString(),
-  };
-  myExchangesState = [exchange, ...myExchangesState];
-  return exchange;
+/** Zapisuje wymianę na backendzie — `cardId` to stabilne ID karty nadawcy
+ *  (wyciągnięte z zeskanowanego/odczytanego linku), NIE surowe dane. */
+export async function submitExchange(method: ExchangeMethod, cardId: string): Promise<ExchangeResult> {
+  return request<ExchangeResult>("/exchanges", {
+    method: "POST",
+    body: JSON.stringify({ cardId, method }),
+  });
 }
 
 export async function getMyExchanges(): Promise<ExchangeResult[]> {
-  return [...myExchangesState];
+  return request<ExchangeResult[]>("/exchanges");
+}
+
+// ---------------------------------------------------------------------------
+// Upload zdjęć (do zapytań o wycenę)
+// TODO: to zapisuje pliki na dysk backendu (patrz komentarz w apps/web/app/api/upload) —
+// działa lokalnie/na VPS, NIE na Vercelu. Przed produkcją podmienić backend na S3/Cloudinary,
+// funkcja mobile zostaje bez zmian (URL i tak przychodzi z backendu).
+// ---------------------------------------------------------------------------
+export async function uploadImage(localUri: string): Promise<string> {
+  const token = await getToken();
+  const filename = localUri.split("/").pop() ?? `photo_${Date.now()}.jpg`;
+  const match = /\.(\w+)$/.exec(filename);
+  const ext = match?.[1]?.toLowerCase() ?? "jpg";
+  const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+
+  const formData = new FormData();
+  formData.append("file", { uri: localUri, name: filename, type: mime } as unknown as Blob);
+
+  const res = await fetch(`${API_URL}/upload`, {
+    method: "POST",
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: formData,
+  });
+
+  if (!res.ok) throw new Error("UPLOAD_FAILED");
+  const { url } = await res.json();
+  return `${SERVER_URL}${url}`;
+}
+
+// ---------------------------------------------------------------------------
+// Usługi specjalisty (z cennikiem)
+// ---------------------------------------------------------------------------
+export async function getMyServices(): Promise<ServiceOffering[]> {
+  return request<ServiceOffering[]>("/services");
+}
+
+export interface AddServiceInput {
+  name: string;
+  description?: string;
+  price?: number | null;
+  priceUnit?: string;
+}
+
+export async function addService(input: AddServiceInput): Promise<ServiceOffering> {
+  return request<ServiceOffering>("/services", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function deleteService(id: string): Promise<void> {
+  await request(`/services/${id}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Zapytania o wycenę ("Zapytaj o wycenę" na profilu specjalisty)
+// ---------------------------------------------------------------------------
+export interface SubmitQuoteRequestInput {
+  specialistProfileId: string;
+  title: string;
+  description: string;
+  budget?: number | null;
+  attachmentUrls?: string[];
+}
+
+export async function submitQuoteRequest(input: SubmitQuoteRequestInput): Promise<QuoteRequest> {
+  return request<QuoteRequest>("/quote-requests", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function getMyQuoteRequests(): Promise<{ sent: QuoteRequest[]; received: QuoteRequest[] }> {
+  return request("/quote-requests");
+}
+
+export async function updateQuoteRequestStatus(
+  id: string,
+  status: "accepted" | "declined"
+): Promise<{ id: string; status: string }> {
+  return request(`/quote-requests/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+}
+
+// ---------------------------------------------------------------------------
+// Rynek zleceń
+// ---------------------------------------------------------------------------
+export async function getJobs(filters: JobFilters): Promise<JobListing[]> {
+  const params = new URLSearchParams();
+  if (filters.query) params.set("query", filters.query);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.city) params.set("city", filters.city);
+  if (filters.budgetType) params.set("budgetType", filters.budgetType);
+  params.set("sortBy", filters.sortBy);
+
+  return request<JobListing[]>(`/jobs?${params.toString()}`);
+}
+
+export async function getJobById(id: string): Promise<JobListing | undefined> {
+  try {
+    return await request<JobListing>(`/jobs/${id}`);
+  } catch {
+    return undefined;
+  }
+}
+
+export interface CreateJobInput {
+  title: string;
+  description: string;
+  category: string;
+  budget?: number | null;
+  budgetType: "fixed" | "hourly" | "negotiable";
+  city: string;
+  deadline?: string | null;
+}
+
+export async function createJob(input: CreateJobInput): Promise<JobListing> {
+  return request<JobListing>("/jobs", { method: "POST", body: JSON.stringify(input) });
+}
+
+export interface ApplyToJobInput {
+  message?: string;
+  price?: number | null;
+}
+
+export async function applyToJob(jobId: string, input: ApplyToJobInput): Promise<JobApplication> {
+  return request<JobApplication>(`/jobs/${jobId}/applications`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getJobApplications(jobId: string): Promise<JobApplication[]> {
+  return request<JobApplication[]>(`/jobs/${jobId}/applications`);
+}
+
+// ---------------------------------------------------------------------------
+// Powiadomienia
+// ---------------------------------------------------------------------------
+export async function getNotifications(): Promise<AppNotification[]> {
+  return request<AppNotification[]>("/notifications");
+}
+
+export async function getUnreadNotificationsCount(): Promise<number> {
+  const { count } = await request<{ count: number }>("/notifications/unread-count");
+  return count;
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await request("/notifications", { method: "PATCH" });
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await request(`/notifications/${id}`, { method: "PATCH" });
+}
+
+// ---------------------------------------------------------------------------
+// Czat
+// ---------------------------------------------------------------------------
+export async function getConversations(): Promise<ConversationSummary[]> {
+  return request<ConversationSummary[]>("/conversations");
+}
+
+export async function getMessages(conversationId: string): Promise<ChatMessage[]> {
+  return request<ChatMessage[]>(`/conversations/${conversationId}/messages`);
+}
+
+export async function sendMessage(conversationId: string, text: string): Promise<ChatMessage> {
+  return request<ChatMessage>(`/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
 }

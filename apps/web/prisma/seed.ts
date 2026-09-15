@@ -63,7 +63,7 @@ async function main() {
       create: { email: s.email, passwordHash, firstName: s.firstName, lastName: s.lastName },
     });
 
-    await prisma.specialistProfile.upsert({
+    const specialistProfile = await prisma.specialistProfile.upsert({
       where: { userId: user.id },
       update: {},
       create: {
@@ -76,8 +76,21 @@ async function main() {
         longitude: 17.0385,
         ratingAvg: 4.8,
         ratingCount: 12,
+        isPublished: true,
       },
     });
+
+    const existingServices = await prisma.serviceOffering.count({
+      where: { specialistProfileId: specialistProfile.id },
+    });
+    if (existingServices === 0) {
+      await prisma.serviceOffering.createMany({
+        data: [
+          { specialistProfileId: specialistProfile.id, name: "Konsultacja wstępna", price: 0, priceUnit: "spotkanie" },
+          { specialistProfileId: specialistProfile.id, name: `Pełna usługa — ${s.profession.toLowerCase()}`, price: null },
+        ],
+      });
+    }
   }
 
   console.log("Seed OK — konto testowe: kamil.nowicki@cardly.app / cardly123");

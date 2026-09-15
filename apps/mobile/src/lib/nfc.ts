@@ -41,13 +41,10 @@ export async function initNfc(): Promise<void> {
 }
 
 /**
- * Zapisuje URL do publicznej wizytówki jako rekord NDEF typu URI (nie JSON).
- * To ważne: telefon BEZ apki Cardly, po zbliżeniu, i tak sam otworzy ten link
- * w przeglądarce — to standardowe, natywne zachowanie systemu przy tagach NFC
- * z rekordem URI. Dzięki temu URL działa jako fallback nawet dla NFC, nie tylko dla QR.
- * W praktyce host-card-emulation / peer-to-peer NFC dla dwóch telefonów wymaga
- * dodatkowej konfiguracji natywnej (Android Beam / Reader mode + HCE) —
- * tutaj mamy gotowy szkielet: request tech -> zapis NDEF -> zamknięcie sesji.
+ * Zapisuje URL wizytówki na FIZYCZNY, zapisywalny tag NFC (naklejkę, kartę) —
+ * to nie jest wysyłanie do drugiego telefonu "na żywo" (do tego służy nfcHce.ts
+ * na Androidzie), tylko jednorazowy zapis na kawałek sprzętu, który potem
+ * każdy może odczytać zwykłym stuknięciem, bez apki.
  */
 export async function shareCardOverNfc(card: BusinessCard): Promise<void> {
   if (!NfcManager) throw new Error("NFC_UNAVAILABLE");

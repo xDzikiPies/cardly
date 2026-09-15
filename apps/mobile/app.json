@@ -24,7 +24,10 @@
         {
           "nfcPermission": "Cardly używa NFC do wymiany wizytówek między telefonami."
         }
-      ]
+      ],
+      "./plugins/withNfcHce.js",
+      "expo-font",
+      "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": false,
@@ -35,7 +38,10 @@
     },
     "android": {
       "package": "com.szymonwitek.cardly",
-      "permissions": ["android.permission.NFC", "android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.NFC",
+        "android.permission.CAMERA"
+      ]
     }
   }
 }

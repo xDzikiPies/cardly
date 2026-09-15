@@ -2,22 +2,28 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, MapPin, Star } from "lucide-react-native";
+import { ChevronLeft, FileText, MapPin, Star } from "lucide-react-native";
 import { Avatar } from "@/components/ui/Avatar";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { Chip } from "@/components/ui/Chip";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { RatingInputModal } from "@/components/specialists/RatingInputModal";
+import { QuoteRequestModal } from "@/components/specialists/QuoteRequestModal";
+import { ServicesList } from "@/components/specialists/ServicesList";
 import { addReview, getSpecialistById } from "@/services/api";
+import { useAuthStore } from "@/store/useAuthStore";
 import { SpecialistProfile } from "@/types";
 import { colors, spacing, typography } from "@/theme";
 
 export default function SpecialistProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const [specialist, setSpecialist] = useState<SpecialistProfile | null>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [quoteModalVisible, setQuoteModalVisible] = useState(false);
+  const [quoteSentVisible, setQuoteSentVisible] = useState(false);
 
   const loadSpecialist = () => {
     if (id) getSpecialistById(id).then((s) => setSpecialist(s ?? null));
@@ -32,6 +38,8 @@ export default function SpecialistProfileScreen() {
     await addReview(specialist.id, { rating, comment: comment || undefined });
     loadSpecialist(); // odśwież, żeby nowa opinia i przeliczona średnia były widoczne
   };
+
+  const isOwnProfile = specialist?.userId === user?.id;
 
   if (!specialist) {
     return (
@@ -70,18 +78,36 @@ export default function SpecialistProfileScreen() {
           </View>
         </View>
 
+        {!isOwnProfile && (
+          <Button
+            label="Zapytaj o wycenę"
+            icon={<FileText size={16} color={colors.textOnPrimary} />}
+            onPress={() => setQuoteModalVisible(true)}
+            fullWidth
+          />
+        )}
+
         <Card>
           <Text style={styles.sectionTitle}>O mnie</Text>
           <Text style={styles.bio}>{specialist.bio}</Text>
         </Card>
 
+        {specialist.services && specialist.services.length > 0 && (
+          <View>
+            <Text style={[styles.sectionTitle, { marginBottom: spacing.md }]}>Usługi i cennik</Text>
+            <ServicesList services={specialist.services} />
+          </View>
+        )}
+
         <View>
           <View style={styles.reviewsHeader}>
             <Text style={styles.sectionTitle}>Opinie ({specialist.reviews.length})</Text>
-            <Pressable style={styles.rateLink} onPress={() => setRatingModalVisible(true)}>
-              <Star size={14} color={colors.primary} />
-              <Text style={styles.rateLinkText}>Zostaw opinię</Text>
-            </Pressable>
+            {!isOwnProfile && (
+              <Pressable style={styles.rateLink} onPress={() => setRatingModalVisible(true)}>
+                <Star size={14} color={colors.primary} />
+                <Text style={styles.rateLinkText}>Zostaw opinię</Text>
+              </Pressable>
+            )}
           </View>
           <View style={{ gap: spacing.md }}>
             {specialist.reviews.map((review) => (
@@ -96,7 +122,9 @@ export default function SpecialistProfileScreen() {
           </View>
         </View>
 
-        <Button label="Wymień się wizytówką" onPress={() => router.push("/(tabs)/exchange")} fullWidth />
+        {!isOwnProfile && (
+          <Button label="Wymień się wizytówką" variant="secondary" onPress={() => router.push("/(tabs)/exchange")} fullWidth />
+        )}
       </ScrollView>
 
       <RatingInputModal
@@ -105,6 +133,23 @@ export default function SpecialistProfileScreen() {
         onClose={() => setRatingModalVisible(false)}
         onSubmit={handleSubmitReview}
       />
+
+      <QuoteRequestModal
+        visible={quoteModalVisible}
+        specialistProfileId={specialist.id}
+        specialistName={`${specialist.firstName} ${specialist.lastName}`}
+        onClose={() => setQuoteModalVisible(false)}
+        onSubmitted={() => {
+          setQuoteModalVisible(false);
+          setQuoteSentVisible(true);
+        }}
+      />
+
+      {quoteSentVisible && (
+        <Pressable style={styles.toast} onPress={() => setQuoteSentVisible(false)}>
+          <Text style={styles.toastText}>Zapytanie wysłane! Odpowiedź dostaniesz w Wiadomościach.</Text>
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 }
@@ -130,4 +175,14 @@ const styles = StyleSheet.create({
   reviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs },
   reviewAuthor: { ...typography.bodyStrong, color: colors.textPrimary },
   reviewComment: { ...typography.body, color: colors.textSecondary, lineHeight: 20 },
+  toast: {
+    position: "absolute",
+    bottom: spacing.xl,
+    left: spacing.xl,
+    right: spacing.xl,
+    backgroundColor: colors.success,
+    borderRadius: 14,
+    padding: spacing.md,
+  },
+  toastText: { ...typography.captionStrong, color: "#fff", textAlign: "center" },
 });
