@@ -72,8 +72,23 @@ export async function login(email: string, password: string): Promise<User> {
     });
     await setToken(token);
     return user;
-  } catch {
-    throw new Error("INVALID_CREDENTIALS");
+  } catch (err) {
+    console.error("--> RZECZYWISTY BŁĄD Z API (login):", err);
+    throw err; // Pozwoli zobaczyć w konsoli dokładny status i wiadomość!
+  }
+}
+
+export async function register(input: RegisterInput): Promise<User> {
+  try {
+    const { token, user } = await request<{ token: string; user: User }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    await setToken(token);
+    return user;
+  } catch (err) {
+    console.error("--> RZECZYWISTY BŁĄD Z API (register):", err);
+    throw err;
   }
 }
 
@@ -84,14 +99,14 @@ export interface RegisterInput {
   password: string;
 }
 
-export async function register(input: RegisterInput): Promise<User> {
-  const { token, user } = await request<{ token: string; user: User }>("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-  await setToken(token);
-  return user;
-}
+// export async function register(input: RegisterInput): Promise<User> {
+//   const { token, user } = await request<{ token: string; user: User }>("/auth/register", {
+//     method: "POST",
+//     body: JSON.stringify(input),
+//   });
+//   await setToken(token);
+//   return user;
+// }
 
 export async function logout(): Promise<void> {
   await clearToken();

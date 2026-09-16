@@ -33,15 +33,23 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.szymonwitek.cardly",
       "infoPlist": {
-        "NFCReaderUsageDescription": "Cardly używa NFC do wymiany wizytówek między telefonami."
+        "NFCReaderUsageDescription": "Cardly używa NFC do wymiany wizytówek między telefonami.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.szymonwitek.cardly",
       "permissions": [
         "android.permission.NFC",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "354481c9-6b81-43fd-b288-e305b064e3d8"
+      }
     }
   }
 }

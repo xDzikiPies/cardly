@@ -33,10 +33,10 @@ login: async (email, password) => {
   set({ isSubmitting: true, error: null });
   try {
     const user = await apiLogin(email, password);
-    console.log("SUKCES LOGIN:", user);
     set({ user, isAuthenticated: true, isSubmitting: false });
-  } catch (err) {
-    console.error("BŁĄD LOGINU (szczegóły):", err); // <--- ZOBACZ TO W KONSOLI
+  } catch (err: any) {
+    // Wyświetli dokładnie status HTTP i odpowiedź z backendu
+    console.error("BŁĄD LOGINU (szczegóły):", err?.response?.data || err?.message || err);
     set({ error: "Nieprawidłowy email lub hasło", isSubmitting: false });
     throw new Error("INVALID_CREDENTIALS");
   }
