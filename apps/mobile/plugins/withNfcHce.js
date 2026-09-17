@@ -1,19 +1,22 @@
-const { withAndroidManifest, withDangerousMod, AndroidConfig } = require("@expo/config-plugins");
+const {
+  withAndroidManifest,
+  withDangerousMod,
+  withEntitlementsPlist,
+  AndroidConfig,
+} = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
-/**
- * react-native-hce (Android HCE — emulacja karty NFC) wymaga ręcznej konfiguracji natywnej,
- * której Expo nie robi automatycznie. Ten plugin robi to za nas przy `expo prebuild`
- * (czyli też przy każdym EAS Buildzie): dopisuje uprawnienia, feature NFC-HCE, plik
- * aid_list.xml, i rejestruje serwis HCE w AndroidManifest.xml.
- *
- * Po dodaniu/zmianie tego pluginu w app.json trzeba zrobić NOWY natywny build
- * (development albo production) — samo `expo start` tego nie podciągnie.
- */
-const AID = "F222222222"; // dowolny, unikalny AID dla naszej apki (hex, parzysta liczba znaków)
+const AID = "F222222222";
 
 module.exports = function withNfcHce(config) {
+  // 1. USUWANIE PROBLEMATYCZNEGO ENTITLEMENT DLA IOS
+  config = withEntitlementsPlist(config, (config) => {
+    delete config.modResults["com.apple.developer.nfc.readersession.formats"];
+    return config;
+  });
+
+  // 2. KONFIGURACJA ANDROID MANIFEST
   config = withAndroidManifest(config, (config) => {
     const manifest = config.modResults;
     const app = manifest.manifest.application[0];
@@ -56,6 +59,7 @@ module.exports = function withNfcHce(config) {
     return config;
   });
 
+  // 3. GENEROWANIE AID_LIST DLA ANDROIDA
   config = withDangerousMod(config, [
     "android",
     async (config) => {
