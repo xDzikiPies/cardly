@@ -22,7 +22,8 @@
       [
         "react-native-nfc-manager",
         {
-          "nfcPermission": "Cardly używa NFC do wymiany wizytówek między telefonami."
+          "nfcPermission": "Cardly używa NFC do wymiany wizytówek między telefonami.",
+          "selectIdentifiers": ["NDEF"]
         }
       ],
       "./plugins/withNfcHce.js",
