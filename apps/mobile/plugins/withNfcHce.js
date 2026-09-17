@@ -1,7 +1,6 @@
 const {
   withAndroidManifest,
   withDangerousMod,
-  withEntitlementsPlist,
   AndroidConfig,
 } = require("@expo/config-plugins");
 const fs = require("fs");
@@ -10,13 +9,7 @@ const path = require("path");
 const AID = "F222222222";
 
 module.exports = function withNfcHce(config) {
-  // 1. USUWANIE PROBLEMATYCZNEGO ENTITLEMENT DLA IOS
-  config = withEntitlementsPlist(config, (config) => {
-    delete config.modResults["com.apple.developer.nfc.readersession.formats"];
-    return config;
-  });
-
-  // 2. KONFIGURACJA ANDROID MANIFEST
+  // 1. KONFIGURACJA ANDROID MANIFEST DLA HCE
   config = withAndroidManifest(config, (config) => {
     const manifest = config.modResults;
     const app = manifest.manifest.application[0];
@@ -59,7 +52,7 @@ module.exports = function withNfcHce(config) {
     return config;
   });
 
-  // 3. GENEROWANIE AID_LIST DLA ANDROIDA
+  // 2. GENEROWANIE AID_LIST DLA ANDROIDA
   config = withDangerousMod(config, [
     "android",
     async (config) => {
