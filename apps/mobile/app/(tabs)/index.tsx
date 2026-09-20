@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronRight, IdCard, Pencil, Repeat, Share2 } from "lucide-react-native";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -24,14 +24,38 @@ export default function MyCardScreen() {
   const user = useAuthStore((s) => s.user);
   const [recentExchanges, setRecentExchanges] = useState<ExchangeResult[]>([]);
   const [isExchangesLoading, setIsExchangesLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
-  useEffect(() => {
-    load();
-    getMyExchanges().then((all) => {
+  const loadAll = useCallback(
+    async (silent = false) => {
+      if (!silent) setIsExchangesLoading(true);
+      await load();
+      const all = await getMyExchanges();
       setRecentExchanges(all.slice(0, RECENT_EXCHANGES_LIMIT));
       setIsExchangesLoading(false);
-    });
+      hasLoadedOnce.current = true;
+    },
+    [load]
+  );
+
+  useEffect(() => {
+    loadAll();
   }, []);
+
+  // Odśwież po powrocie na tę zakładkę (np. po edycji wizytówki albo świeżej
+  // wymianie) — po cichu, bez spinnera, dane widać od razu.
+  useFocusEffect(
+    useCallback(() => {
+      if (hasLoadedOnce.current) loadAll(true);
+    }, [loadAll])
+  );
+
+  const handlePullToRefresh = async () => {
+    setIsRefreshing(true);
+    await loadAll(true);
+    setIsRefreshing(false);
+  };
 
   const background =
     CARD_BACKGROUNDS.find((b) => b.id === card?.backgroundId) ?? CARD_BACKGROUNDS[0];
@@ -48,7 +72,10 @@ export default function MyCardScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <FadeInScreen>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullToRefresh} tintColor={colors.primary} />}
+        >
           <ScreenHeader
             title="Moja wizytówka"
             description="Tak wygląda Twoja cyfrowa wizytówka — edytuj dane albo zmień tło w dowolnym momencie."

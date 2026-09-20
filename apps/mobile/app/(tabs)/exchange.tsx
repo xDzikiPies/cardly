@@ -112,6 +112,10 @@ export default function ExchangeScreen() {
   };
 
   const finishReceive = async (method: "NFC" | "QR", raw: string) => {
+    // Druga warstwa ochrony przed zdublowaniem wymiany — jeśli już przetwarzamy
+    // albo już mamy wynik, ignoruj kolejne wywołania (np. z NFC odczytującego kilka razy).
+    if (connectionState === "success" || result) return;
+
     const cardId = extractCardIdFromShareUrl(raw);
     if (!cardId) {
       setConnectionState("error");

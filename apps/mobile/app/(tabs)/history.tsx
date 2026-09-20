@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Building2, Mail, MapPin, Phone, Search as SearchIcon, X } from "lucide-react-native";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -18,10 +19,32 @@ export default function HistoryScreen() {
   const [exchanges, setExchanges] = useState<ExchangeResult[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<ExchangeResult | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
+
+  const load = useCallback(async () => {
+    const data = await getMyExchanges();
+    setExchanges(data);
+    hasLoadedOnce.current = true;
+  }, []);
 
   useEffect(() => {
-    getMyExchanges().then(setExchanges);
-  }, []);
+    load();
+  }, [load]);
+
+  // Odśwież po powrocie na tę zakładkę (np. zaraz po wymianie) — po cichu,
+  // bez spinnera, żeby lista nie migała jak dane już raz były załadowane.
+  useFocusEffect(
+    useCallback(() => {
+      if (hasLoadedOnce.current) load();
+    }, [load])
+  );
+
+  const handlePullToRefresh = async () => {
+    setIsRefreshing(true);
+    await load();
+    setIsRefreshing(false);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -61,6 +84,7 @@ export default function HistoryScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullToRefresh} tintColor={colors.primary} />}
           renderItem={({ item }) => <ExchangeListItem exchange={item} onPress={() => setSelected(item)} />}
           ListEmptyComponent={
             <EmptyState

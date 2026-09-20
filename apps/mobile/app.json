@@ -33,7 +33,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.szymonwitek.cardly",
-      "buildNumber": "20",
+      "buildNumber": "21",
       "infoPlist": {
         "NFCReaderUsageDescription": "Cardly używa NFC do wymiany wizytówek między telefonami.",
         "ITSAppUsesNonExemptEncryption": false

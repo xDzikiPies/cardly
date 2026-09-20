@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -20,6 +20,16 @@ interface QrPanelProps {
 export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps) {
   const [mode, setMode] = useState<"show" | "scan">(scanOnly ? "scan" : "show");
   const [permission, requestPermission] = useCameraPermissions();
+  // Kamera potrafi wywołać onBarcodeScanned kilka razy na sekundę, dopóki kod
+  // jest w kadrze — bez tej blokady jedno zeskanowanie zapisywało się jako
+  // kilka/kilkanaście osobnych wymian.
+  const hasScannedRef = useRef(false);
+
+  const handleBarcodeScanned = (data: string) => {
+    if (hasScannedRef.current) return;
+    hasScannedRef.current = true;
+    onScanned(data);
+  };
 
   if (mode === "show" && myCard) {
     // Kodujemy URL, nie surowe dane — dzięki temu ten sam kod QR działa jako fallback:
@@ -34,7 +44,16 @@ export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps
         <Text style={styles.hint}>
           Pokaż ten kod drugiej osobie — zadziała w apce Cardly, a bez niej otworzy Twoją wizytówkę w przeglądarce
         </Text>
-        {!shareOnly && <Button label="Zamiast tego zeskanuj kod" variant="ghost" onPress={() => setMode("scan")} />}
+        {!shareOnly && (
+          <Button
+            label="Zamiast tego zeskanuj kod"
+            variant="ghost"
+            onPress={() => {
+              hasScannedRef.current = false;
+              setMode("scan");
+            }}
+          />
+        )}
       </View>
     );
   }
@@ -54,7 +73,7 @@ export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps
         <CameraView
           style={StyleSheet.absoluteFill}
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          onBarcodeScanned={({ data }) => onScanned(data)}
+          onBarcodeScanned={({ data }) => handleBarcodeScanned(data)}
         />
       </View>
       <Text style={styles.hint}>Wyceluj aparat w kod QR drugiej osoby</Text>

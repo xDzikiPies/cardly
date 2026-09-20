@@ -1,6 +1,5 @@
-import React, { useCallback, useRef } from "react";
-import { Animated, ViewStyle } from "react-native";
-import { useFocusEffect } from "expo-router";
+import React from "react";
+import { View, ViewStyle } from "react-native";
 
 interface FadeInScreenProps {
   children: React.ReactNode;
@@ -8,22 +7,12 @@ interface FadeInScreenProps {
 }
 
 /**
- * Owija zawartość zakładki i za każdym razem, gdy staje się ona aktywna
- * (użytkownik na nią przełącza), robi krótki fade-in zamiast twardego "cięcia".
+ * Wcześniej robił fade-in przy każdym przełączeniu zakładki — na telefonie
+ * wyglądało to ociężale/wolno. Standardowe apki (Instagram, X itp.) w ogóle
+ * nie animują zawartości przy zmianie zakładki, więc usunięto animację —
+ * zakładki przełączają się teraz natychmiast. Nazwa/props zostają takie same,
+ * żeby nie trzeba było zmieniać wszystkich ekranów, które go używają.
  */
 export function FadeInScreen({ children, style }: FadeInScreenProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.setValue(0);
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    }, [opacity])
-  );
-
-  return <Animated.View style={[{ flex: 1 }, style, { opacity }]}>{children}</Animated.View>;
+  return <View style={[{ flex: 1 }, style]}>{children}</View>;
 }
