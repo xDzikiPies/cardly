@@ -9,6 +9,7 @@
     "newArchEnabled": true,
     "plugins": [
       "expo-router",
+      "expo-sensors",
       "expo-camera",
       [
         "expo-splash-screen",

@@ -11,10 +11,12 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Send } from "lucide-react-native";
+import { Briefcase, ChevronLeft, FileText, Send, ShieldAlert } from "lucide-react-native";
+import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
-import { getMessages, sendMessage } from "@/services/api";
-import { ChatMessage } from "@/types";
+import { getConversationInfo, getMessages, sendMessage } from "@/services/api";
+import { useAuthStore } from "@/store/useAuthStore";
+import { ChatMessage, ConversationInfo } from "@/types";
 import { colors, radius, spacing, typography } from "@/theme";
 
 const POLL_INTERVAL_MS = 4000;
@@ -22,13 +24,15 @@ const POLL_INTERVAL_MS = 4000;
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const me = useAuthStore((s) => s.user);
+  const [info, setInfo] = useState<ConversationInfo | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const listRef = useRef<FlatList>(null);
 
-  const load = useCallback(async () => {
+  const loadMessages = useCallback(async () => {
     if (!id) return;
     const data = await getMessages(id);
     setMessages(data);
@@ -36,10 +40,12 @@ export default function ConversationScreen() {
   }, [id]);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, POLL_INTERVAL_MS);
+    if (!id) return;
+    getConversationInfo(id).then(setInfo);
+    loadMessages();
+    const interval = setInterval(loadMessages, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [load]);
+  }, [id, loadMessages]);
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -55,6 +61,8 @@ export default function ConversationScreen() {
     }
   };
 
+  const ContextIcon = info?.context?.type === "job_application" ? Briefcase : FileText;
+
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -62,7 +70,29 @@ export default function ConversationScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <ChevronLeft size={22} color={colors.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Wiadomości</Text>
+
+          <View style={styles.headerCenter}>
+            <Avatar
+              uri={info?.otherUserAvatarUrl}
+              firstName={info?.otherUserName?.split(" ")[0] ?? "?"}
+              lastName={info?.otherUserName?.split(" ")[1]}
+              size={32}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerName} numberOfLines={1}>
+                {info?.otherUserName ?? "Wiadomości"}
+              </Text>
+              {info?.context && (
+                <View style={styles.contextRow}>
+                  <ContextIcon size={11} color={colors.primary} />
+                  <Text style={styles.contextText} numberOfLines={1}>
+                    {info.context.title}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+
           <View style={{ width: 22 }} />
         </View>
 
@@ -75,13 +105,37 @@ export default function ConversationScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-            renderItem={({ item }) => (
-              <View style={[styles.bubbleRow, item.isMine && styles.bubbleRowMine]}>
-                <View style={[styles.bubble, item.isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                  <Text style={[styles.bubbleText, item.isMine && styles.bubbleTextMine]}>{item.text}</Text>
+            ListHeaderComponent={<SafetyNotice />}
+            renderItem={({ item, index }) => {
+              const prev = messages[index - 1];
+              const showSenderInfo = !prev || prev.senderId !== item.senderId;
+
+              const senderName = item.isMine ? me?.firstName ?? "Ty" : info?.otherUserName ?? "Użytkownik";
+              const senderAvatar = item.isMine ? me?.avatarUrl : info?.otherUserAvatarUrl;
+              const [senderFirst, senderLast] = item.isMine
+                ? [me?.firstName ?? "Ty", me?.lastName]
+                : [info?.otherUserName?.split(" ")[0] ?? "?", info?.otherUserName?.split(" ")[1]];
+
+              return (
+                <View style={[styles.messageRow, item.isMine && styles.messageRowMine]}>
+                  {!item.isMine && (
+                    <View style={styles.avatarSlot}>
+                      {showSenderInfo && <Avatar uri={senderAvatar} firstName={senderFirst} lastName={senderLast} size={26} />}
+                    </View>
+                  )}
+                  <View style={[styles.bubbleCol, item.isMine && styles.bubbleColMine]}>
+                    {showSenderInfo && (
+                      <Text style={[styles.senderName, item.isMine && styles.senderNameMine]}>
+                        {item.isMine ? "Ty" : senderName}
+                      </Text>
+                    )}
+                    <View style={[styles.bubble, item.isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
+                      <Text style={[styles.bubbleText, item.isMine && styles.bubbleTextMine]}>{item.text}</Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            )}
+              );
+            }}
           />
         )}
 
@@ -102,24 +156,57 @@ export default function ConversationScreen() {
   );
 }
 
+function SafetyNotice() {
+  return (
+    <View style={styles.safetyCard}>
+      <ShieldAlert size={16} color={colors.warning} />
+      <Text style={styles.safetyText}>
+        Dla własnego bezpieczeństwa nie udostępniaj tu numerów kart płatniczych, PESEL-u ani haseł.
+        Administracja Cardly nigdy nie poprosi Cię o hasło do konta.
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },
-  headerTitle: { ...typography.h2, color: colors.textPrimary },
+  headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  headerName: { ...typography.h2, color: colors.textPrimary },
+  contextRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 1 },
+  contextText: { ...typography.tiny, color: colors.primary, flexShrink: 1 },
+
   list: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, gap: spacing.sm },
-  bubbleRow: { flexDirection: "row", justifyContent: "flex-start" },
-  bubbleRowMine: { justifyContent: "flex-end" },
-  bubble: { maxWidth: "78%", paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.lg },
+
+  safetyCard: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  safetyText: { ...typography.tiny, color: colors.textSecondary, flex: 1, lineHeight: 16 },
+
+  messageRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, justifyContent: "flex-start" },
+  messageRowMine: { justifyContent: "flex-end" },
+  avatarSlot: { width: 26 },
+  bubbleCol: { maxWidth: "76%", alignItems: "flex-start" },
+  bubbleColMine: { alignItems: "flex-end" },
+  senderName: { ...typography.tiny, color: colors.textMuted, marginBottom: 2, marginLeft: 4 },
+  senderNameMine: { marginLeft: 0, marginRight: 4, textAlign: "right" },
+  bubble: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.lg },
   bubbleTheirs: { backgroundColor: colors.surfaceAlt, borderBottomLeftRadius: 4 },
   bubbleMine: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
   bubbleText: { ...typography.body, color: colors.textPrimary },
   bubbleTextMine: { color: colors.textOnPrimary },
+
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",

@@ -9,10 +9,13 @@ interface BusinessCardPreviewProps {
   card: BusinessCard;
   background: CardBackground;
   compact?: boolean;
+  /** Dodatkowa zawartość renderowana NA WIERZCHU karty, wewnątrz tego samego
+   *  zaokrąglonego/przyciętego kontenera co gradient — np. efekt "shine" w TiltBusinessCard. */
+  overlay?: React.ReactNode;
 }
 
 /** Karta 1.586:1 (proporcje jak fizyczna wizytówka), z gradientem tła i wzorem. */
-export function BusinessCardPreview({ card, background, compact }: BusinessCardPreviewProps) {
+export function BusinessCardPreview({ card, background, compact, overlay }: BusinessCardPreviewProps) {
   const { colorStart, colorEnd, textColor, pattern } = background;
 
   return (
@@ -49,6 +52,8 @@ export function BusinessCardPreview({ card, background, compact }: BusinessCardP
             <Row icon={<MapPin size={13} color={textColor} />} text={card.workAddress} textColor={textColor} />
           ) : null}
         </View>
+
+        {overlay}
       </LinearGradient>
     </View>
   );
@@ -65,7 +70,6 @@ function Row({ icon, text, textColor }: { icon: React.ReactNode; text: string; t
   );
 }
 
-/** Bardzo lekki dekoracyjny wzór — czysty CSS/View, bez dodatkowych assetów. */
 function PatternOverlay({ pattern, tint }: { pattern: CardBackground["pattern"]; tint: string }) {
   if (pattern === "none") return null;
 
@@ -73,10 +77,7 @@ function PatternOverlay({ pattern, tint }: { pattern: CardBackground["pattern"];
     return (
       <View style={styles.patternDotsWrap} pointerEvents="none">
         {Array.from({ length: 24 }).map((_, i) => (
-          <View
-            key={i}
-            style={[styles.dot, { backgroundColor: tint, opacity: 0.08 }]}
-          />
+          <View key={i} style={[styles.dot, { backgroundColor: tint, opacity: 0.08 }]} />
         ))}
       </View>
     );
@@ -92,13 +93,7 @@ function PatternOverlay({ pattern, tint }: { pattern: CardBackground["pattern"];
     );
   }
 
-  // waves — uproszczone, jedna diagonalna warstwa
-  return (
-    <View
-      style={[styles.waveShape, { backgroundColor: tint, opacity: 0.08 }]}
-      pointerEvents="none"
-    />
-  );
+  return <View style={[styles.waveShape, { backgroundColor: tint, opacity: 0.08 }]} pointerEvents="none" />;
 }
 
 const CARD_ASPECT = 1.586;

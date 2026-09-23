@@ -7,7 +7,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FadeInScreen } from "@/components/ui/FadeInScreen";
-import { BusinessCardPreview } from "@/components/card/BusinessCardPreview";
+import { TiltBusinessCard } from "@/components/card/TiltBusinessCard";
 import { ExchangeListItem } from "@/components/exchange/ExchangeListItem";
 import { useCardStore } from "@/store/useCardStore";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -98,7 +98,7 @@ export default function MyCardScreen() {
             </View>
           ) : (
             <View style={styles.body}>
-              <BusinessCardPreview card={card} background={background} />
+              <TiltBusinessCard card={card} background={background} />
 
               <View style={styles.actions}>
                 <View style={{ flex: 1 }}>

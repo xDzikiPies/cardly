@@ -102,6 +102,13 @@ export interface QuoteRequest {
   requesterName?: string; // obecne gdy JA jestem specjalistą i to dostałem
 }
 
+export interface ConversationInfo {
+  id: string;
+  otherUserName: string;
+  otherUserAvatarUrl?: string;
+  context: { type: "quote_request" | "job_application"; title: string } | null;
+}
+
 // ---------------------------------------------------------------------------
 // Rynek zleceń
 // ---------------------------------------------------------------------------

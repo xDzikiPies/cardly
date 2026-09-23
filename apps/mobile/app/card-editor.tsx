@@ -6,7 +6,7 @@ import { X } from "lucide-react-native";
 import { Pressable } from "react-native";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Button } from "@/components/ui/Button";
-import { BusinessCardPreview } from "@/components/card/BusinessCardPreview";
+import { TiltBusinessCard } from "@/components/card/TiltBusinessCard";
 import { BackgroundPicker } from "@/components/card/BackgroundPicker";
 import { CardEditorForm } from "@/components/card/CardEditorForm";
 import { useCardStore } from "@/store/useCardStore";
@@ -60,7 +60,7 @@ export default function CardEditorScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {background && (
           <View style={styles.previewWrap}>
-            <BusinessCardPreview card={draft} background={background} />
+            <TiltBusinessCard card={draft} background={background} />
           </View>
         )}
 

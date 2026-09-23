@@ -15,8 +15,13 @@ import {
   SpecialistFilters,
   SpecialistProfile,
   User,
+  ConversationInfo
 } from "@/types";
 import { getToken, setToken, clearToken } from "@/lib/tokenStore";
+
+export async function getConversationInfo(conversationId: string): Promise<ConversationInfo> {
+  return request<ConversationInfo>(`/conversations/${conversationId}`);
+}
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
 /** Bazowy adres bez `/api` — do budowania pełnych URL-i do uploadowanych plików. */
