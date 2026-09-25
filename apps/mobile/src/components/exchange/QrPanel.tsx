@@ -2,6 +2,8 @@ import React, { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Clipboard from "expo-clipboard";
+import { Check, Copy } from "lucide-react-native";
 import { BusinessCard } from "@/types";
 import { buildCardShareUrl } from "@/lib/cardEncoding";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +22,7 @@ interface QrPanelProps {
 export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps) {
   const [mode, setMode] = useState<"show" | "scan">(scanOnly ? "scan" : "show");
   const [permission, requestPermission] = useCameraPermissions();
+  const [copied, setCopied] = useState(false);
   // Kamera potrafi wywołać onBarcodeScanned kilka razy na sekundę, dopóki kod
   // jest w kadrze — bez tej blokady jedno zeskanowanie zapisywało się jako
   // kilka/kilkanaście osobnych wymian.
@@ -36,6 +39,12 @@ export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps
     // otwarty w przeglądarce (bez apki) pokazuje wizytówkę na stronie cardly.app/c/...
     const shareUrl = buildCardShareUrl(myCard);
 
+    const handleCopyLink = async () => {
+      await Clipboard.setStringAsync(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    };
+
     return (
       <View style={styles.wrapper}>
         <Card style={styles.qrCard}>
@@ -44,6 +53,21 @@ export function QrPanel({ myCard, onScanned, shareOnly, scanOnly }: QrPanelProps
         <Text style={styles.hint}>
           Pokaż ten kod drugiej osobie — zadziała w apce Cardly, a bez niej otworzy Twoją wizytówkę w przeglądarce
         </Text>
+
+        <Button
+          label={copied ? "Skopiowano!" : "Kopiuj link do wizytówki"}
+          variant="secondary"
+          icon={
+            copied ? (
+              <Check size={16} color={colors.primaryDark} />
+            ) : (
+              <Copy size={16} color={colors.primaryDark} />
+            )
+          }
+          onPress={handleCopyLink}
+          fullWidth
+        />
+
         {!shareOnly && (
           <Button
             label="Zamiast tego zeskanuj kod"
