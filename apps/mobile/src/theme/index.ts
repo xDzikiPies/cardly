@@ -1,39 +1,39 @@
 /**
  * Cardly design system.
- * Cel: nowoczesny, "SaaS-owy" wygląd (Uber / Revolut), NIE natywny iOS/Android.
+ * Cel: nowoczesny, "SaaS-owy" wygląd (Uber / Revolut) — Natywny Dark Mode.
  * Wszystkie ekrany i komponenty powinny korzystać wyłącznie z tych tokenów —
  * żadnych "magicznych" hexów rozsianych po komponentach.
  */
 
 export const colors = {
-  // brand
-  primary: "#5B4CF0",
-  primaryDark: "#4633D6",
-  primarySoft: "#EEECFE",
+  // brand / akcent (Nowoczesny, neony fiolet przełamany z cyjanem/bielą)
+  primary: "#6E56CF", // Jaskrawy, czytelny fiolet idealny do ciemnego tła
+  primaryDark: "#5742A9", // Ciemniejszy odcień na stany pressed/active
+  primarySoft: "rgba(110, 86, 207, 0.18)", // Półprzezroczyste tło pod badge i akcenty
 
-  // neutralne tło / powierzchnie
-  bg: "#F6F6FB",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F0F0F7",
+  // neutralne tło / powierzchnie (Revolut / Uber Dark Style)
+  bg: "#0E0F12", // Głęboka, bardzo ciemna grafitowa czerń jako główne tło
+  surface: "#17181C", // Główne karty, kontenery, kafle
+  surfaceAlt: "#212328", // Alternatywne tło (np. pola tekstowe, przyciski wtórne)
 
   // tekst
-  textPrimary: "#15142B",
-  textSecondary: "#6B6B85",
-  textMuted: "#9C9CB4",
-  textOnPrimary: "#FFFFFF",
+  textPrimary: "#F3F3F7", // Wyraźny, jasny tekst podstawowy (nie czysta biel dla mniejszego zmęczenia oczu)
+  textSecondary: "#9395A1", // Poboczne opisy, podtytuły
+  textMuted: "#606370", // Wyciszone etykiety, placeholdery
+  textOnPrimary: "#FFFFFF", // Tekst na przyciskach w kolorze primary
 
   // linie / obramowania
-  border: "#E7E7F2",
+  border: "#2A2C33", // Subtelne, ciemne krawędzie separujące elementy
 
-  // statusy
-  success: "#22C58B",
-  successSoft: "#E4F9F1",
-  warning: "#F5A623",
-  danger: "#F1554C",
-  dangerSoft: "#FDEBEA",
+  // statusy (Jaskrawsze warianty dostosowane do ciemnego tła)
+  success: "#30D158",
+  successSoft: "rgba(48, 209, 88, 0.15)",
+  warning: "#FFD60A",
+  danger: "#FF453A",
+  dangerSoft: "rgba(255, 69, 58, 0.15)",
 
   // akcent do gwiazdek / oznaczeń
-  star: "#FFB400",
+  star: "#FFD60A",
 } as const;
 
 export const radius = {
@@ -65,19 +65,21 @@ export const typography = {
 };
 
 export const shadow = {
+  // W trybie Dark Mode tradycyjne cienie są niewidoczne.
+  // Podmieniono je na delikatne rozświetlenie krawędzi (glow/elevation).
   card: {
-    shadowColor: "#15142B",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   floating: {
-    shadowColor: "#15142B",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
   },
 };
 
